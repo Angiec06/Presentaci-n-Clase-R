@@ -1,0 +1,154 @@
+---
+title: "Felicidad Vs Alcohol"
+author: "Angela Cantillo Gonzalez"
+date: "`r format(Sys.time(), '%d/%m, %Y')`"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+
+
+## Base de datos seleccionada
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+Datos_crudos<-read.csv("HappinessAlcoholConsumption.csv")
+```
+
+
+La base de datos seleccionada fue _Happiness and Alcohol Consumption_ de _Kaggle_.
+Esta base de Datos se subio hace un año y se centra en el consumo de alcohol versus la felicidad.
+
+La base recopila información de `r length(Datos_crudos$Country)` países durante el 2016.
+
+
+
+
+![](Happiness.jpg){width=50%}
+
+
+
+
+
+_"¿Cómo calificaría su felicidad en una escala de 0 a 10, donde 10 es el más feliz"?_
+
+
+## Los Datos{.smaller}
+
+La base de datos cuenta con `r ncol(Datos_crudos)` columnas
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(kableExtra)
+library(tidyverse)
+Datos_crudos<-read.csv("HappinessAlcoholConsumption.csv")
+kable(head(Datos_crudos),caption = "_**Tabla 1.**_ Datos crudos de la base de datos") %>%
+kable_styling(bootstrap_options = "striped", full_width = F
+)
+```
+
+
+_"¿Cómo calificaría su felicidad en una escala de 0 a 10, donde 10 es el más feliz"?_
+
+## Modificación de Tabla{.smaller}
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+Tabla_1<-Datos_crudos %>% select(-Hemisphere,-HDI,-GDP_PerCapita)
+kable(head(Tabla_1),caption = "_**Tabla 2.**_ Modificación de la base de datos") %>%
+kable_styling(bootstrap_options = "striped", full_width = F
+)
+```
+
+
+
+
+## Mi pregunta{.incremental}
+
+¿ El tipo de alcohol que se consume influye en la felicidad ?
+
+ 
+```{r}
+Tabla_1<-Datos_crudos %>% select(-Hemisphere,-HDI,-GDP_PerCapita)
+
+Tabla_2 <- Tabla_1 %>% gather(key = Alcohol_Type, value = Liter_per_capita, -Country, -Region, -HappinessScore)
+view(Tabla_2)
+ggplot(Tabla_2, aes(x = Liter_per_capita, y = HappinessScore)) + geom_point(aes(color = Alcohol_Type)) + 
+  theme_classic()
+```
+
+## Mi pregunta
+
+¿ El tipo de alcohol que se consume influye en la felicidad ?
+
+```{r fig.cap= "Boxplot de Felicidad en función al tipo de alcohol",fig.align="center"}
+ggplot(Tabla_2, aes(x =Alcohol_Type, y = HappinessScore )) + geom_boxplot(aes(fill= Alcohol_Type),)+ geom_jitter(size = 0.7, shape = 8) + theme_classic()
+
+```
+
+## Nueva pregunta {.incremental}
+
+¿Cual de los factores esta más relacionado a la felicidad?
+
+Variable de respuesta = Felicidad
+
+Variables: 
+
+-Region
+           
+-Tipo de alcohol
+           
+-Litros per capita 
+
+
+  **7 modelos lineales**
+ 
+ ## Seleccion de Modelo
+ 
+```{r}
+library(broom)
+M1<-lm(HappinessScore~Alcohol_Type, data=Tabla_2)
+M2<-lm(HappinessScore~Liter_per_capita, data=Tabla_2)
+M3<-lm(HappinessScore~Region, data=Tabla_2)
+M4<-lm(HappinessScore~Alcohol_Type + Liter_per_capita, data=Tabla_2)
+M5<-lm(HappinessScore~Alcohol_Type + Region, data=Tabla_2)
+M6<-lm(HappinessScore~Liter_per_capita + Region, data=Tabla_2)
+M7<-lm(HappinessScore~Alcohol_Type + Liter_per_capita + Region, data=Tabla_2)
+
+Modelo1 <- glance(M1) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M1")
+Modelo2 <- glance(M2) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M2")
+Modelo3 <- glance(M3) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M3")
+Modelo4 <- glance(M4) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M4")
+Modelo5 <- glance(M5) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M5")
+Modelo6 <- glance(M6) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M6")
+Modelo7 <- glance(M7) %>% dplyr::select(r.squared, AIC,df) %>% mutate(Modelo = "M7")
+
+#Para juntar las tablas de los Modelos#
+
+Modelos <- bind_rows(Modelo1, Modelo2, Modelo3, Modelo4,Modelo5,Modelo6, Modelo7) %>% arrange(AIC) %>% mutate(DeltaAIC = AIC-min(AIC))
+
+```
+```{r fig.align="center"}
+kable(
+Modelos <- bind_rows(Modelo1, Modelo2, Modelo3, Modelo4,Modelo5,Modelo6, Modelo7) %>% arrange(AIC) %>% mutate(DeltaAIC = AIC-min(AIC))) %>% kable_styling(bootstrap_options = "striped", full_width = F
+)
+```
+ 
+ El modelo con mejor ajuste fue es el `r Modelos[1,4]` que implica la Region y la cantidad de alcohol per capita 
+ 
+ 
+## Para el informe
+
+Analizar los datos de  presentes en _Happiness and Alcohol Consumption_ y a partir de esto responder a la pregunta:
+
+
+
+_ ¿ Qué factores se relacionan más a la felicidad de la personas?
+
+
+Hacer análisis complementarios que hagan una discriminación por región que podrian dar respuesta a cual es la region que se considera más feliz.
